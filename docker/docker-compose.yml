@@ -1,0 +1,110 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: myapp-web
+    ports:
+      - "8181:80"
+    volumes:
+#      - ./apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
+      - ../:/var/www/html
+#      - ../public:/var/www/html
+#      - ./php/php.ini:/usr/local/etc/php/php.ini
+    environment:
+      # Often useful to set the user to match your local user to avoid file permission issues
+      - USER_ID=${USER_ID:-1000}
+      - GROUP_ID=${GROUP_ID:-1000}
+    depends_on:
+      - mysql
+    networks:
+      - app_network
+
+#  postgres:
+#    image: postgres:17-alpine  # Recommended for smaller image size
+#    container_name: myapp_postgres
+#    restart: unless-stopped  # Automatically restart unless manually stopped
+#    environment:
+#      # It is MUCH more secure to use a secrets file for these.
+#      POSTGRES_USER: ${POSTGRES_USER:-postgres}  # Uses env var or defaults
+#      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mysupersecretpassword}
+#      POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
+#      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C' # Useful for case-sensitive indexes
+#      # TZ: UTC # Optional: Set the database timezone
+#    ports:
+#      - "5432:5432" # Only map the port if you need to access it from your host machine
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql # Optional: Run init scripts
+#      - ./postgres/postgresql.conf:/etc/postgresql.conf # Optional: Custom config
+#    command: >
+#      postgres -c config_file=/etc/postgresql.conf # Use the custom config
+#    healthcheck: # Crucial for `depends_on` conditions
+#      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myuser} -d ${POSTGRES_DB:-mydatabase}"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 10s
+#    networks:
+#      - app_network
+
+#  my_app:
+#    build: .
+#    depends_on:
+#      postgres:
+#        condition: service_healthy # Wait for DB to be ready, not just running
+#    environment:
+#      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+#    networks:
+#      - app_network
+
+  mysql:
+    image: mysql:8.4
+    container_name: codeigniter_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: codeigniter_db
+      MYSQL_USER: codeigniter_user
+      MYSQL_PASSWORD: userpassword
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
+    command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --skip-name-resolve
+      --explicit_defaults_for_timestamp=1
+
+    networks:
+      - app_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: codeigniter_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+    depends_on:
+      - mysql
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+    name: my_app_network
+
+volumes:
+#  postgres_data: # Named volume persists data even if container is removed
+#    name: my_app_postgres_data # Give it a specific name
+  mysql_data:
+    name: my_app_mysql_data # Give it a specific name
