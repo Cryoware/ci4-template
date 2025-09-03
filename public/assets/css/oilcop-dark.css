@@ -1,0 +1,69 @@
+/* OilCap GenII Dark Theme */
+
+:root {
+    --primary: #3e719b;
+    --primary-dark: #2b4878;
+    --secondary: #24a53b;
+    --dark: #1c1c1a;
+    --gray: #5d5c5b;
+    --background: #1c1c1a; /* Dark background */
+    --surface: #2b2b2b; /* Panel background */
+    --text: #f1f1f1; /* Light text */
+    --text-light: #c0c0c0; /* Muted text */
+    --border: #3d3d3d;
+}
+
+body {
+    background-color: var(--background);
+    color: var(--text);
+}
+
+a {
+    color: var(--secondary);
+}
+a:hover {
+    color: var(--primary);
+}
+
+/* Navbar */
+.navbar {
+    background-color: var(--dark);
+}
+.navbar .nav-link,
+.navbar .navbar-brand {
+    color: var(--text);
+}
+.navbar .nav-link:hover {
+    color: var(--secondary);
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+.btn-secondary {
+    background-color: var(--secondary);
+    border-color: var(--secondary);
+}
+.btn-secondary:hover {
+    background-color: #1f8a33;
+    border-color: #1f8a33;
+}
+
+/* Cards */
+.card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+/* Footer */
+footer {
+    background-color: var(--primary-dark);
+    color: #fff;
+}

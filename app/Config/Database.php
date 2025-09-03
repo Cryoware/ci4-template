@@ -24,33 +24,6 @@ class Database extends Config
      *
      * @var array<string, mixed>
      */
-
-
-//    public $default = [
-//        'DSN'      => 'mysql:host=localhost;port=3306;dbname=codeigniter_db;charset=utf8mb4',
-//        'hostname' => 'localhost',
-//        'username' => 'codeigniter_user',
-//        'password' => 'userpassword',
-//        'database' => 'codeigniter_db',
-//        'DBDriver' => 'PDO',
-//        'DBPrefix' => '',
-//        'pConnect' => false,
-//        'DBDebug'  => (ENVIRONMENT !== 'production'),
-//        'charset'  => 'utf8mb4',
-//        'DBCollat' => 'utf8mb4_0900_ai_ci',
-//        'swapPre'  => '',
-//        'encrypt'  => false,
-//        'compress' => false,
-//        'strictOn' => false,
-//        'failover' => [],
-//        'port'     => 3306,
-//        // PDO specific options for MySQL 8.4
-//        'connectOptions' => [
-//            PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
-//            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8mb4' COLLATE 'utf8mb4_0900_ai_ci'",
-//        ],
-//    ];
-
     public array $default = [
         'DSN'          => '',
         'hostname'     => 'localhost',
@@ -60,7 +33,7 @@ class Database extends Config
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
-        'DBDebug'      => (ENVIRONMENT !== 'production'),
+        'DBDebug'      => true,
         'charset'      => 'utf8mb4',
         'DBCollat'     => 'utf8mb4_0900_ai_ci',
         'swapPre'      => '',
@@ -75,10 +48,6 @@ class Database extends Config
             'date'     => 'Y-m-d',
             'datetime' => 'Y-m-d H:i:s',
             'time'     => 'H:i:s',
-        ],
-        // Add these options for MySQL 8.4 with caching_sha2_password
-        'connectOptions' => [
-            MYSQLI_OPT_SSL_VERIFY_SERVER_CERT => false,
         ],
     ];
 

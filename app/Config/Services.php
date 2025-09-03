@@ -3,6 +3,7 @@
 namespace Config;
 
 use CodeIgniter\Config\BaseService;
+use App\Services\Menu as MenuService;
 
 /**
  * Services Configuration file.
@@ -29,4 +30,12 @@ class Services extends BaseService
      *     return new \CodeIgniter\Example();
      * }
      */
+    public static function menu(bool $getShared = true): MenuService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('menu');
+        }
+
+        return new MenuService();
+    }
 }

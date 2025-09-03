@@ -2,6 +2,7 @@
 
 use App\Models\ConfigModel;
 use InvalidArgumentException;
+use ReflectionException;
 
 class ConfigService
 {
@@ -29,12 +30,12 @@ class ConfigService
         // Load from cache or DB
         $configs = cache(self::$cacheKey);
         if (!$configs) {
-            $configs = (new ConfigModel())->findAll();
+            $configs = new ConfigModel()->findAll();
             cache()->save(self::$cacheKey, $configs, self::$cacheTTL);
         }
 
         foreach ($configs as $row) {
-            if ($row['config_key'] === $key) {
+            if (($row['config_key'] ?? null) === $key) {
                 $value = self::decodeValue($row['config_value'], $row['config_type']);
                 self::$memoryCache[$key] = $value;
                 return $value;
@@ -46,8 +47,9 @@ class ConfigService
 
     /**
      * Set a config value (with type enforcement)
+     * @throws ReflectionException
      */
-    public static function set(string $key, $value, string $type)
+    public static function set(string $key, $value, string $type): void
     {
         if (!in_array($type, self::$validTypes, true)) {
             throw new InvalidArgumentException("Invalid config type: $type");
@@ -64,20 +66,13 @@ class ConfigService
             'config_type'  => $type
         ]);
 
-        // Update caches
+        // Update in-memory
         self::$memoryCache[$key] = $value;
-        $configs = cache(self::$cacheKey) ?? [];
-        $configs[$key] = [
-            'config_key'   => $key,
-            'config_value' => $encodedValue,
-            'config_type'  => $type,
-        ];
-        cache()->save(self::$cacheKey, $configs, self::$cacheTTL);
+
+        $rows = $model->findAll();
+        cache()->save(self::$cacheKey, $rows, self::$cacheTTL);
     }
 
-    /**
-     * Convert DB string into PHP type
-     */
     protected static function decodeValue(string $value, string $type)
     {
         switch ($type) {
@@ -85,15 +80,14 @@ class ConfigService
             case 'boolean': return filter_var($value, FILTER_VALIDATE_BOOLEAN);
             case 'array':
             case 'dictionary':
-            case 'json':    return json_decode($value, true);
+            case 'json':
+                $decoded = json_decode($value, true);
+                return is_array($decoded) ? $decoded : [];
             case 'string':
             default:        return $value;
         }
     }
 
-    /**
-     * Validate + convert PHP type into DB string
-     */
     protected static function encodeValue($value, string $type): string
     {
         switch ($type) {
@@ -106,19 +100,30 @@ class ConfigService
                 return $value ? 'true' : 'false';
 
             case 'array':
-                if (!is_array($value) || array_keys($value) !== range(0, count($value) - 1)) {
-                    throw new InvalidArgumentException("Expected array of values");
+                // Accept any array shape or a comma-separated string; never throw.
+                if (is_string($value)) {
+                    $value = array_values(array_filter(array_map('trim', explode(',', $value)), static function ($v) {
+                        return $v !== '' && $v !== null;
+                    }));
+                } elseif (!is_array($value)) {
+                    $value = [];
                 }
-                return json_encode($value);
+                // Normalize keys to sequential indices
+                $value = array_values($value);
+                return json_encode($value, JSON_UNESCAPED_UNICODE);
 
             case 'dictionary':
-                if (!is_array($value) || array_keys($value) === range(0, count($value) - 1)) {
+                if (!is_array($value)) {
                     throw new InvalidArgumentException("Expected associative array (key/value pairs)");
                 }
-                return json_encode($value);
+                // If it's a sequential array, convert to dictionary with numeric keys
+                if (array_keys($value) === range(0, count($value) - 1)) {
+                    $value = (array) $value;
+                }
+                return json_encode($value, JSON_UNESCAPED_UNICODE);
 
             case 'json':
-                return json_encode($value);
+                return json_encode($value, JSON_UNESCAPED_UNICODE);
 
             case 'string':
             default:
@@ -127,29 +132,25 @@ class ConfigService
         }
     }
 
-    public static function clearCache()
+    public static function clearCache(): void
     {
         cache()->delete(self::$cacheKey);
         self::$memoryCache = [];
     }
 
-    /**
-     * Bulk get multiple config values.
-     *
-     * @param array|null $keys If null, returns ALL configs
-     * @return array key => value
-     */
-    public static function bulkGet(array $keys = null): array
+    public static function bulkGet(?array $keys = null): array
     {
-        // Prefer memory cache
         if (empty(self::$memoryCache)) {
             $configs = cache(self::$cacheKey);
             if (!$configs) {
-                $configs = (new ConfigModel())->findAll();
+                $configs = new ConfigModel()->findAll();
                 cache()->save(self::$cacheKey, $configs, self::$cacheTTL);
             }
 
             foreach ($configs as $row) {
+                if (!isset($row['config_key'])) {
+                    continue;
+                }
                 self::$memoryCache[$row['config_key']] =
                     self::decodeValue($row['config_value'], $row['config_type']);
             }
@@ -159,7 +160,6 @@ class ConfigService
             return self::$memoryCache;
         }
 
-        // Return only requested keys
         $result = [];
         foreach ($keys as $key) {
             $result[$key] = self::$memoryCache[$key] ?? null;
@@ -168,11 +168,7 @@ class ConfigService
     }
 
     /**
-     * Bulk set multiple configs.
-     * Expects array of [key => ['value' => ..., 'type' => ...]]
-     *
-     * @param array $configs
-     * @return void
+     * @throws ReflectionException
      */
     public static function bulkSet(array $configs): void
     {
@@ -180,14 +176,14 @@ class ConfigService
 
         foreach ($configs as $key => $data) {
             if (!isset($data['value'], $data['type'])) {
-                throw new \InvalidArgumentException("Missing value/type for config: $key");
+                throw new InvalidArgumentException("Missing value/type for config: $key");
             }
 
             $value = $data['value'];
             $type  = $data['type'];
 
             if (!in_array($type, self::$validTypes, true)) {
-                throw new \InvalidArgumentException("Invalid config type: $type");
+                throw new InvalidArgumentException("Invalid config type: $type");
             }
 
             $encodedValue = self::encodeValue($value, $type);
@@ -198,17 +194,11 @@ class ConfigService
                 'config_type'  => $type,
             ]);
 
-            // Update in-memory
             self::$memoryCache[$key] = $value;
         }
 
-        // Refresh full cache
+        // Persist a consistent rows list and refresh memory on the next request
         $rows = $model->findAll();
-        $allConfigs = [];
-        foreach ($rows as $row) {
-            $allConfigs[$row['config_key']] = $row;
-        }
-        cache()->save(self::$cacheKey, $allConfigs, self::$cacheTTL);
+        cache()->save(self::$cacheKey, $rows, self::$cacheTTL);
     }
-
 }

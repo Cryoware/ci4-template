@@ -41,4 +41,14 @@ class Validation extends BaseConfig
     // --------------------------------------------------------------------
     // Rules
     // --------------------------------------------------------------------
+    /**
+     * Validation group for admin authentication login.
+     * Can be referenced by $this->validate('authLogin').
+     *
+     * @var array<string, string>
+     */
+    public array $authLogin = [
+        'username' => 'required|min_length[3]',
+        'password' => 'required|min_length[3]',
+    ];
 }

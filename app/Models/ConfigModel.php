@@ -8,6 +8,7 @@ class ConfigModel extends Model
     protected $primaryKey = 'config_key';
     protected $returnType = 'array';
     protected $allowedFields = ['config_key', 'config_value', 'config_type', 'updated_at'];
+    protected $useAutoIncrement = false; // <— important for string PKs
 
     /**
      * Fetch all configs as key => value array

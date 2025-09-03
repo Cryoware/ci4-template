@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: myapp-web
     ports:
-      - "8181:80"
+      - "8484:80"
     volumes:
 #      - ./apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
       - ../:/var/www/html

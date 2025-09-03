@@ -7,6 +7,17 @@ use CodeIgniter\Config\BaseConfig;
 class App extends BaseConfig
 {
     /**
+     * -------------------------------------------------------------------
+     * Application Name
+     * -------------------------------------------------------------------
+     *
+     * This value is the name of your application. This value is used when
+     * the framework needs to place the application's name in a notification
+     * or any other location as required by the application or its packages.
+     */
+    public string $appName = 'OilCop GenII';
+
+    /**
      * --------------------------------------------------------------------------
      * Base Site URL
      * --------------------------------------------------------------------------
@@ -40,7 +51,7 @@ class App extends BaseConfig
      * something else. If you have configured your web server to remove this file
      * from your site URIs, set this variable to an empty string.
      */
-    public string $indexPage = 'index.php';
+    public string $indexPage = '';
 
     /**
      * --------------------------------------------------------------------------
@@ -105,11 +116,11 @@ class App extends BaseConfig
      *
      * If false, no automatic detection will be performed.
      */
-    public bool $negotiateLocale = false;
+    public bool $negotiateLocale = true;
 
     /**
      * --------------------------------------------------------------------------
-     * Supported Locales
+     * Supported Locales https://simplelocalize.io/data/locales/
      * --------------------------------------------------------------------------
      *
      * If $negotiateLocale is true, this array lists the locales supported
@@ -120,7 +131,7 @@ class App extends BaseConfig
      *
      * @var list<string>
      */
-    public array $supportedLocales = ['en'];
+    public array $supportedLocales = ['en', 'zh', 'fr', 'fi', 'ru', 'de', 'es', 'it'];
 
     /**
      * --------------------------------------------------------------------------
