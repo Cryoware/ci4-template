@@ -13,6 +13,11 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     # Needed for SQLite3 extensions (pdo_sqlite, sqlite3) - ADD THIS LINE
     libsqlite3-dev \
+    # Needed for GD (PNG, JPEG, WebP, FreeType)
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libwebp-dev \
+    libfreetype6-dev \
     # Needed for git, Composer, and other common dev tools
     git \
     unzip \
@@ -20,21 +25,23 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install and configure PHP extensions
-RUN docker-php-ext-install -j$(nproc) \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+ && docker-php-ext-install -j$(nproc) \
     intl \
     mbstring \
     mysqli \
     pdo_mysql \
-    # pdo_pgsql and pdo_sqlite are optional
     pdo_pgsql \
     pdo_sqlite \
-    && docker-php-ext-enable \
+    gd \
+ && docker-php-ext-enable \
     intl \
     mbstring \
     mysqli \
     pdo_mysql \
     pdo_pgsql \
-    pdo_sqlite
+    pdo_sqlite \
+    gd
 
 # Install Xdebug from PECL
 RUN pecl install xdebug && docker-php-ext-enable xdebug

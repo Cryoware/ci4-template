@@ -20,9 +20,29 @@ class UsersApiController extends BaseController
     // DataTables server-side + index listing
     public function index()
     {
-        $params = $this->request->getGet() + $this->request->getPost();
+        // Prefer GET for DataTables requests
+        $params = $this->request->getGet();
+
+        // Normalize search into $params['search']['value']
+        $search = $this->request->getVar('search'); // handles nested arrays
+        if (is_array($search) && array_key_exists('value', $search)) {
+            $params['search'] = ['value' => (string) $search['value']];
+        } elseif (($flat = $this->request->getGet('search[value]')) !== null) {
+            $params['search'] = ['value' => (string) $flat];
+        }
+
+        // Optional: normalize order too (guard for malformed inputs)
+        $order = $this->request->getVar('order');
+        if (is_array($order)) {
+            $params['order'] = $order;
+        }
 
         $dt = $this->model->datatablesQuery($params);
+
+        // Gate meta SQL by environment and query flag
+        $allowDebug = (ENVIRONMENT !== 'production');
+        $debugFlag  = (bool) ($this->request->getGet('debug_sql') ?? false);
+        $debug      = $allowDebug && $debugFlag;
 
         $data = [
             'draw'            => (int) ($params['draw'] ?? 0),
@@ -42,23 +62,18 @@ class UsersApiController extends BaseController
             }, $dt['data']),
         ];
 
+        if ($debug) {
+            $data['meta'] = [
+                'sql_data'  => $dt['sql_data']  ?? null,
+                'sql_count' => $dt['sql_count'] ?? null,
+                'search'    => $params['search']['value'] ?? null,
+            ];
+        }
+
         return $this->response->setJSON($data);
     }
 
     // Show single user
-    public function show(?int $f_user_id = null)
-    {
-        if ($f_user_id === null) {
-            return $this->failValidationError('ID is required');
-        }
-
-        $user = $this->model->find($f_user_id);
-        if (!$user) {
-            return $this->failNotFound("User {$f_user_id} not found");
-        }
-
-        return $this->response->setJSON($user);
-    }
 
     // Create
     public function create()

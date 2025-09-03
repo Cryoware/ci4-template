@@ -58,7 +58,7 @@ class UserDetailModel extends Model
     {
         $builder = $this->builder();
 
-        // Normalize search param (handle string or array)
+        // Normalize search param: support both nested (search[value]) and flat ('search[value]')
         $searchValue = '';
         if (isset($params['search'])) {
             if (is_array($params['search'])) {
@@ -67,16 +67,44 @@ class UserDetailModel extends Model
                 $searchValue = $params['search']; // fallback if client sent plain string
             }
         }
+        if ($searchValue === '' && isset($params['search[value]'])) {
+            $searchValue = (string) $params['search[value]'];
+        }
+
+        $searchValue = trim($searchValue);
 
         if ($searchValue !== '') {
+            // Escape LIKE wildcards and apply contains-match across all searchable columns
+            $escaped = $this->db->escapeLikeString($searchValue);
+
             $builder->groupStart();
+            $first = true;
             foreach (self::SEARCHABLE as $col) {
-                $builder->orLike($col, $searchValue);
+                // CI4.6 like(field, match, side='both', escape=null)
+                if ($first) {
+                    $builder->like($col, $escaped, 'both', null);
+                    $first = false;
+                } else {
+                    $builder->orLike($col, $escaped, 'both', null);
+                }
             }
             $builder->groupEnd();
         }
 
-        // Ordering (guard against malformed 'order')
+        // Total count BEFORE any filtering (use a separate fresh builder so we don't reset the active one)
+        $total = $this->db->table($this->table)->countAllResults();
+
+        // IMPORTANT: Get filtered count BEFORE applying ORDER BY (so count has no ORDER)
+        $countBuilder = clone $builder;
+        $countBuilder->select('COUNT(*) as filtered_count');
+        $compiledCountSql = $countBuilder->getCompiledSelect(false);
+        $row = $countBuilder->get()->getRowArray();
+        $filteredCount = isset($row['filtered_count']) ? (int) $row['filtered_count'] : 0;
+        if ($searchValue === '') {
+            $filteredCount = $total;
+        }
+
+        // Now apply ordering (used only for the data query)
         if (isset($params['order']) && is_array($params['order']) && isset($params['order'][0]) && is_array($params['order'][0])) {
             $orderIndex = (int) ($params['order'][0]['column'] ?? 0);
             $dirRaw     = $params['order'][0]['dir'] ?? 'asc';
@@ -87,17 +115,8 @@ class UserDetailModel extends Model
             $builder->orderBy('f_user_id', 'DESC');
         }
 
-        // Total count before filtering
-        $total = $this->countAll();
-
-        // Filtered count
-        $countBuilder = clone $builder;
-        $countBuilder->select('COUNT(*) as filtered_count');
-        $row = $countBuilder->get()->getRowArray();
-        $filteredCount = isset($row['filtered_count']) ? (int) $row['filtered_count'] : 0;
-        if ($searchValue === '') {
-            $filteredCount = $total;
-        }
+        // Take compiled SQL snapshot for data BEFORE pagination is applied
+        $compiledDataSql = $builder->getCompiledSelect(false);
 
         // Paging
         $length = (int) ($params['length'] ?? 10);
@@ -108,10 +127,19 @@ class UserDetailModel extends Model
 
         $data = $builder->get()->getResultArray();
 
+        // Optional debug logs controlled by .env flag app.logDTSQL
+        $logSql = (bool) (env('app.logDTSQL') ?? false);
+        if ($logSql) {
+            log_message('debug', 'DT compiled data SQL: {sql}', ['sql' => $compiledDataSql]);
+            log_message('debug', 'DT compiled count SQL: {sql}', ['sql' => $compiledCountSql]);
+        }
+
         return [
-            'total'    => $total,
-            'filtered' => $filteredCount,
-            'data'     => $data,
+            'total'     => $total,
+            'filtered'  => $filteredCount,
+            'data'      => $data,
+            'sql_data'  => $compiledDataSql,   // for debug passthrough
+            'sql_count' => $compiledCountSql,  // for debug passthrough
         ];
     }
 }

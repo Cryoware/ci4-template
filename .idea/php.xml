@@ -56,6 +56,10 @@
       <path value="$PROJECT_DIR$/vendor/sebastian/version" />
       <path value="$PROJECT_DIR$/vendor/codeigniter4/framework" />
       <path value="$PROJECT_DIR$/vendor/composer" />
+      <path value="$PROJECT_DIR$/vendor/almasaeed2010/adminlte" />
+      <path value="$PROJECT_DIR$/vendor/datatables.net/datatables.net" />
+      <path value="$PROJECT_DIR$/vendor/datatables.net/datatables.net-dt" />
+      <path value="$PROJECT_DIR$/vendor/components/jquery" />
     </include_path>
   </component>
   <component name="PhpInterpreters">
