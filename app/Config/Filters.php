@@ -70,6 +70,8 @@ class Filters extends BaseConfig
      *     array<string, list<string>>
      */
     public array $filters = [
-        // 'auth' => ['before' => ['admin/*']], // Route-level used instead for parallel migration
+        'csrf-exempt' => [
+            'before' => ['api/v1/*'], // Disable CSRF for all API v1 routes
+        ]
     ];
 }
