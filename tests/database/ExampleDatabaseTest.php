@@ -13,6 +13,14 @@ final class ExampleDatabaseTest extends CIUnitTestCase
     use DatabaseTestTrait;
 
     protected $seed = ExampleSeeder::class;
+    protected $DBGroup = 'tests';
+
+    public static function setUpBeforeClass(): void
+    {
+        if (! extension_loaded('sqlite3')) {
+            self::markTestSkipped('SQLite3 extension is not available; skipping database tests.');
+        }
+    }
 
     public function testModelFindAll(): void
     {
