@@ -57,7 +57,7 @@ class AuthApiController extends BaseController
     private function handlePostAuthentication(AuthModel $model, object $user, AuthConfig $config, bool $skipAgreementGate = false): ResponseInterface
     {
         // Enabled check
-        if ((int)$user->f_user_enabled !== 1) {
+        if ((int)$user->is_active !== 1) {
             return $this->envelope([
                 'success' => false,
                 'code' => 'auth.blocked',
@@ -69,27 +69,28 @@ class AuthApiController extends BaseController
         [$tzRes, $timezoneValSeconds, $daylightSave] = $this->computeTimezone($model, $config);
 
         // Technician checks
-        if ((int)$user->f_role_id === RoleId::TECH->value) {
-            $shiftOk = $model->check_shift((int)$user->f_user_id, $timezoneValSeconds);
-            if (!$shiftOk) {
-                return $this->envelope([
-                    'success' => false,
-                    'code' => 'auth.shift_invalid',
-                    'message' => 'User is outside allowed shift window.'
-                ], ResponseInterface::HTTP_FORBIDDEN);
-            }
-            $tankMonitor = $model->tank_monitor_sol();
-            if ($tankMonitor) {
-                return $this->envelope([
-                    'success' => false,
-                    'code' => 'auth.monitor_enabled',
-                    'message' => 'Tank monitor mode is enabled and prevents login.'
-                ], ResponseInterface::HTTP_CONFLICT);
-            }
-        }
+        // TODO: just commented below out for now
+//        if ((int)$user->f_role_id === RoleId::TECH->value) {
+//            $shiftOk = $model->check_shift((int)$user->f_user_id, $timezoneValSeconds);
+//            if (!$shiftOk) {
+//                return $this->envelope([
+//                    'success' => false,
+//                    'code' => 'auth.shift_invalid',
+//                    'message' => 'User is outside allowed shift window.'
+//                ], ResponseInterface::HTTP_FORBIDDEN);
+//            }
+//            $tankMonitor = $model->tank_monitor_sol();
+//            if ($tankMonitor) {
+//                return $this->envelope([
+//                    'success' => false,
+//                    'code' => 'auth.monitor_enabled',
+//                    'message' => 'Tank monitor mode is enabled and prevents login.'
+//                ], ResponseInterface::HTTP_CONFLICT);
+//            }
+//        }
 
         // Agreement gate (unless explicitly skipped, e.g., after accepting)
-        if (!$skipAgreementGate && (int)$user->f_agrmt_accept === 0) {
+        if (!$skipAgreementGate && (int)$user->agreed_to_terms === 0) {
             return $this->envelope([
                 'success' => false,
                 'code' => 'auth.agreement_required',
@@ -110,28 +111,31 @@ class AuthApiController extends BaseController
         ];
 
         session()->set([
-            'userid' => $user->f_user_id,
-            'email' => $user->f_user_email,
-            'role_id' => $user->f_role_id,
-            'tzone' => $timezoneValSeconds,
-            'time_zone' => $timeZoneMeta['time_zone'],
-            'time_zone_value' => $timeZoneMeta['time_zone_value'],
-            'date_format' => $timeZoneMeta['date_format'],
-            'time_hours' => $timeZoneMeta['time_hours'],
-            'utc_zone' => $timeZoneMeta['utc_zone'],
-            'session_start' => time(),
-            'user_language' => $language,
-            'daylight_save' => $daylightSave,
+            'userid' => $user->user_id,
+            'email' => $user->email,
+//            'role_id' => $user->f_role_id,
+//            'tzone' => $timezoneValSeconds,
+//            'time_zone' => $timeZoneMeta['time_zone'],
+//            'time_zone_value' => $timeZoneMeta['time_zone_value'],
+//            'date_format' => $timeZoneMeta['date_format'],
+//            'time_hours' => $timeZoneMeta['time_hours'],
+//            'utc_zone' => $timeZoneMeta['utc_zone'],
+//            'session_start' => time(),
+//            'user_language' => $language,
+//            'daylight_save' => $daylightSave,
         ]);
 
-        $redirect = $this->resolveRedirectByRole((int)$user->f_role_id);
+        $redirect = $this->resolveRedirectByRole(1);
+        // Todo: commented out
+//        $redirect = $this->resolveRedirectByRole((int)$user->f_role_id);
 
         return $this->envelope([
             'success' => true,
             'code' => 'auth.logged_in',
             'message' => 'Login successful',
             'data' => [
-                'role_id' => (int)$user->f_role_id,
+                'role_id' => 1,
+//                'role_id' => (int)$user->f_role_id,
                 'redirect' => $redirect,
                 'agreement_required' => false,
             ],
@@ -281,7 +285,7 @@ class AuthApiController extends BaseController
             }
 
             // Respect enabled check before updating agreement
-            if ((int)$user->f_user_enabled !== 1) {
+            if ((int)$user->is_active !== 1) {
                 return $this->envelope([
                     'success' => false,
                     'code' => 'auth.blocked',
@@ -292,11 +296,11 @@ class AuthApiController extends BaseController
             // Mark agreement accepted
             try {
                 $db = db_connect();
-                $db->table('t_users_details')
-                    ->where('f_user_id', $user->f_user_id)
-                    ->update(['f_agrmt_accept' => 1]);
+                $db->table('users')
+                    ->where('user_id', $user->f_user_id)
+                    ->update(['agreed_to_terms' => 1]);
                 // reflect the in-memory object so post handler won’t gate
-                $user->f_agrmt_accept = 1;
+                $user->agreed_to_terms = 1;
             } catch (\Throwable $e) {
                 return $this->envelope([
                     'success' => false,
@@ -332,7 +336,7 @@ class AuthApiController extends BaseController
         }
 
         // Respect enabled check before updating agreement
-        if ((int)$user->f_user_enabled !== 1) {
+        if ((int)$user->is_active !== 1) {
             return $this->envelope([
                 'success' => false,
                 'code' => 'auth.blocked',
@@ -343,10 +347,10 @@ class AuthApiController extends BaseController
         // Mark agreement accepted
         try {
             $db = db_connect();
-            $db->table('t_users_details')
-                ->where('f_user_id', $user->f_user_id)
-                ->update(['f_agrmt_accept' => 1]);
-            $user->f_agrmt_accept = 1;
+            $db->table('users')
+                ->where('user_id', $user->f_user_id)
+                ->update(['agreed_to_terms' => 1]);
+            $user->agreed_to_terms = 1;
         } catch (\Throwable $e) {
             return $this->envelope([
                 'success' => false,

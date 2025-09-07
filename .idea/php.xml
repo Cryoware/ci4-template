@@ -128,7 +128,7 @@
       </interpreter>
     </phpInfoCache>
   </component>
-  <component name="PhpProjectSharedConfiguration" php_language_level="8.1" />
+  <component name="PhpProjectSharedConfiguration" php_language_level="8.4" />
   <component name="PhpRuntimeConfiguration">
     <extensions>
       <extension name="Ev" enabled="false" />
@@ -243,6 +243,7 @@
   </component>
   <component name="PhpUnit">
     <phpunit_settings>
+      <phpunit_by_interpreter interpreter_id="c578a201-a0a5-4bd5-a372-49f39166e2b5" configuration_file_path="C:/Users/xersi/PhpstormProjects/ci4-template/phpunit.xml.dist" custom_loader_path="C:/Users/xersi/PhpstormProjects/ci4-template/vendor/autoload.php" use_configuration_file="true" />
       <PhpUnitSettings configuration_file_path="$PROJECT_DIR$/phpunit.xml.dist" custom_loader_path="$PROJECT_DIR$/vendor/autoload.php" use_configuration_file="true" />
     </phpunit_settings>
   </component>

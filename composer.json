@@ -10,7 +10,7 @@
         "slack": "https://codeigniterchat.slack.com"
     },
     "require": {
-        "php": "^8.1",
+        "php": ">=8.4",
         "almasaeed2010/adminlte": "v4.0.0-rc4",
         "codeigniter4/framework": "^4.0",
         "datatables.net/datatables.net-dt": "^2.3"
@@ -37,7 +37,10 @@
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
-        "sort-packages": true
+        "sort-packages": true,
+        "platform": {
+            "php": "8.4.0"
+        }
     },
     "scripts": {
         "test": "phpunit"

@@ -70,8 +70,6 @@ class Filters extends BaseConfig
      *     array<string, list<string>>
      */
     public array $filters = [
-        'csrf-exempt' => [
-            'before' => ['api/v1/*'], // Disable CSRF for all API v1 routes
-        ]
+        // CSRF disabled: no route-scoped CSRF filters applied.
     ];
 }

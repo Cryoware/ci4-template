@@ -7,30 +7,50 @@ use CodeIgniter\Model;
 
 final class AuthModel extends Model
 {
-    protected $table      = 't_users_details';
-    protected $primaryKey = 'f_user_id';
+    protected $table      = 'users';
+    protected $primaryKey = 'user_id';
 
-    protected $allowedFields = ['f_user_pin', 'f_user_email', 'f_password'];
+    protected $allowedFields = ['pin_hash', 'email', 'password_hash'];
 
     // Legacy PIN login (safe)
     public function loginByPin(string $pin)
     {
-        return $this->db->table('t_users_details')
-            ->select('t_users_details.*, t_user_role_map.*')
-            ->join('t_user_role_map', 't_user_role_map.f_user_id = t_users_details.f_user_id')
-            ->where('t_users_details.f_user_pin', $pin)
-            ->limit(1)
+        // Fetch candidates with a non-empty PIN hash and verify in PHP
+        $rows = $this->db->table('users')
+            ->select('users.*, user_roles.*')
+            ->join('user_roles', 'user_roles.user_id = users.user_id', 'left')
+            ->where('users.pin_hash IS NOT NULL', null, false)
+            ->where('users.pin_hash <>', '')
             ->get()
-            ->getRow();
+            ->getResult();
+
+        foreach ($rows as $row) {
+            $hash = $row->pin_hash ?? null;
+            if (is_string($hash) && $hash !== '' && password_verify($pin, $hash)) {
+                // Opportunistic rehash if needed
+                if (password_needs_rehash($hash, PASSWORD_DEFAULT)) {
+                    try {
+                        $this->db->table('users')
+                            ->where('user_id', $row->user_id ?? $row->f_user_id ?? null)
+                            ->update(['pin_hash' => password_hash($pin, PASSWORD_DEFAULT)]);
+                    } catch (\Throwable $e) {
+                        // best-effort rehash
+                    }
+                }
+                return $row;
+            }
+        }
+
+        return null;
     }
 
     // Email lookup with role
     public function findByEmail(string $email)
     {
-        return $this->db->table('t_users_details')
-            ->select('t_users_details.*, t_user_role_map.*')
-            ->join('t_user_role_map', 't_user_role_map.f_user_id = t_users_details.f_user_id', 'left')
-            ->where('t_users_details.f_user_email', $email)
+        return $this->db->table('users')
+            ->select('users.*, user_roles.*')
+            ->join('user_roles', 'user_roles.user_id = users.user_id', 'left')
+            ->where('users.email', $email)
             ->limit(1)
             ->get()
             ->getRow();
@@ -46,9 +66,9 @@ final class AuthModel extends Model
         if (password_verify($password, $user->f_password)) {
             if (password_needs_rehash($user->f_password, PASSWORD_DEFAULT)) {
                 try {
-                    $this->db->table('t_users_details')
-                        ->where('f_user_id', $user->f_user_id)
-                        ->update(['f_password' => password_hash($password, PASSWORD_DEFAULT)]);
+                    $this->db->table('users')
+                        ->where('user_id', $user->f_user_id)
+                        ->update(['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);
                 } catch (\Throwable $e) {
                     // best-effort rehash
                 }
@@ -62,21 +82,23 @@ final class AuthModel extends Model
     public function setUserPassword(int $userId, string $plainPassword): bool
     {
         $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
-        return (bool) $this->db->table('t_users_details')
-            ->where('f_user_id', $userId)
-            ->update(['f_password' => $hash]);
+        return (bool) $this->db->table('users')
+            ->where('user_id', $userId)
+            ->update(['password_hash' => $hash]);
     }
 
+    // TODO: Returning NULL to just skip this for now
     // Language used by session bootstrap
     public function get_language(): ?string
-    {
+    { return null;
         $row = $this->db->query('SELECT tl.f_language_name FROM t_initial_setup AS ti JOIN t_languages AS tl ON tl.f_language_id = ti.f_user_language_id')->getRow();
         return $row->f_language_name ?? null;
     }
 
+    // TODO: Returning NULL to just skip this for now
     // Timezone bundle used by session bootstrap
     public function get_user_timezone()
-    {
+    { return null;
         return $this->db->query('SELECT tz.*, ins.f_date_format, ins.f_user_time_hours, ins.f_day_light_mode FROM t_time_zone AS tz JOIN t_initial_setup AS ins ON ins.f_user_time_zone = tz.f_zone_id ORDER BY ins.f_initial_id DESC')->getRow();
     }
 

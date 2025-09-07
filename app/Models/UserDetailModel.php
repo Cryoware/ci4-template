@@ -6,44 +6,42 @@ use CodeIgniter\Model;
 
 class UserDetailModel extends Model
 {
-    protected $table            = 't_users_details';
-    protected $primaryKey       = 'f_user_id';
+    protected $table            = 'users';
+    protected $primaryKey       = 'user_id';
     protected $useAutoIncrement = true;
 
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
 
     protected $allowedFields    = [
-        'f_first_name',
-        'f_last_name',
-        'f_user_email',
-        'f_user_pin',
-        'f_user_email',
-        'f_password',
-        'f_user_enabled',
-        'f_company_name',
-        'f_department_name',
-        'f_emergency_stop',
-        'f_calibrate',
-        'f_kfactor',
-        'f_default',
-        'f_agrmt_accept',
-        'f_agrmt_email_copy',
-        'f_agrmt_downloaded',
-        'f_last_logout',
-        'f_locked_until',
-        'f_failed_login_count',
-        'f_lockout_until',
-        'f_status',
-        'f_failed_login_attempts',
-        'f_last_failed_login',
-        'f_last_login',
-        'f_created_at',
-        'f_updated_at',
-        'f_updated_by',
-        'f_last_updated',
-        'f_created_by',
-        'f_create_by',
+        'external_uuid',
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+        'password_hash',
+        'pin_hash',
+        'company_id',
+        'department_id',
+        'language_id',
+        'time_zone_id',
+        'is_active',
+        'is_locked',
+        'lockout_reason',
+        'lockout_until',
+        'must_change_password',
+        'agreed_to_terms',
+        'agreed_to_terms_at',
+        'last_login_at',
+        'last_login_ip',
+        'last_login_user_agent',
+        'last_logout_at',
+        'last_logout_type',
+        'account_expires_at',
+        'created_at',
+        'updated_at',
+        'updated_by',
+        'created_by',
     ];
 
     protected $useTimestamps = true;
