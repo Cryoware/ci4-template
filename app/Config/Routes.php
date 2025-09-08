@@ -78,4 +78,9 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers'], static function($ro
     $routes->post('auth/login', 'Api\V1\AuthApiController::login');
     $routes->post('auth/logout', 'Api\V1\AuthApiController::logout');
     $routes->post('auth/agreement/accept', 'Api\V1\AuthApiController::agreementAccept');
+
+    // Tanks (stateless)
+    $routes->get('tanks', 'Api\V1\TankApiController::index');
+    $routes->get('tanks/stream', 'Api\V1\TankApiController::stream');
+    $routes->get('tanks/(:num)', 'Api\V1\TankApiController::show/$1');
 });

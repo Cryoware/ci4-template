@@ -37,8 +37,10 @@ final class TankApiController extends BaseController
             ->setHeader('Cache-Control', 'no-cache, must-revalidate')
             ->setHeader('ETag', $etag)
             ->setJSON([
-                'data' => $tanks,
-                'meta' => [
+                'success' => true,
+                'code'    => 'tanks.list_ok',
+                'data'    => $tanks,
+                'meta'    => [
                     'count' => count($tanks),
                     'etag'  => $etag,
                 ],
@@ -54,13 +56,22 @@ final class TankApiController extends BaseController
             if ((int)($t['f_tank_id'] ?? 0) === $id) { $tank = $t; break; }
         }
         if (!$tank) {
-            return $this->response->setStatusCode(404)->setJSON(['error' => 'Not found']);
+            return $this->response->setStatusCode(404)->setJSON([
+                'success' => false,
+                'code'    => 'common.not_found',
+                'message' => 'Resource not found'
+            ]);
         }
         $etag = '"' . sha1(json_encode([$tank['f_tank_id'] ?? 0, $tank['SensorStatus'] ?? '', $tank['f_tank_present'] ?? ''])) . '"';
         if ($this->request->getHeaderLine('If-None-Match') === $etag) {
             return $this->response->setStatusCode(304)->setHeader('ETag', $etag);
         }
-        return $this->response->setHeader('ETag', $etag)->setJSON(['data' => $tank]);
+        return $this->response->setHeader('ETag', $etag)->setJSON([
+            'success' => true,
+            'code'    => 'tanks.get_ok',
+            'data'    => $tank,
+            'meta'    => ['etag' => $etag]
+        ]);
     }
 
     // Optional: SSE stream for near real-time updates (see notes below)

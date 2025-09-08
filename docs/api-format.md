@@ -11,6 +11,8 @@ Notes:
   that follows this spec or by honoring content negotiation (`Accept: application/json`).
 - `TankApiController` (app/Controllers/Api/V1/TankApiController.php) already follows the general shape of this standard
   with `data` and `meta` and ETag support.
+- OpenAPI spec: This guide aligns with OpenAPI 3.1.1; see `docs/openapi.yaml` for the canonical specification.
+- Legacy naming note: All examples use the normalized schema (no legacy t_ table or f_ field prefixes). Field names like tank_id, station_id, product_id, etc., match the current database dump in docs\\Docker_8_4-2025_09_06_17_18_11-dump.sql.
 
 ## 1. Response Envelope
 
@@ -365,10 +367,10 @@ Clients may still choose their own routing logic; the redirect is advisory.
 {
   "data": [
     {
-      "f_tank_id": 1
+      "tank_id": 1
     },
     {
-      "f_tank_id": 2
+      "tank_id": 2
     }
   ],
   "meta": {
