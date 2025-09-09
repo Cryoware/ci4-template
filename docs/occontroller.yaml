@@ -127,6 +127,99 @@ paths:
                         email: ado@example.com
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /auth/agreement/accept:
+    post:
+      tags: [Authentication]
+      summary: Accept user agreement
+      description: Marks the user's agreement acceptance and sets agreed_to_terms_at.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Agreement accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      agreed_to_terms:
+                        type: boolean
+                      agreed_to_terms_at:
+                        type: string
+                        format: date-time
+
+  /refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Rotates the HttpOnly refresh cookie and returns a new access token. Requires the refresh_token cookie. No Authorization header required.
+      security: []
+      responses:
+        '200':
+          description: Token refreshed
+          headers:
+            Set-Cookie:
+              description: Rotated HttpOnly refresh token cookie.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  token:
+                    type: string
+                  expires_in:
+                    type: integer
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/UserPayload'
 components:
   securitySchemes:
     # Define the bearer (JWT) security scheme used by Swagger UI
@@ -194,6 +287,160 @@ components:
         expires_in:
           type: integer
           example: 3600
+        user:
+          allOf:
+            - $ref: '#/components/schemas/User'
+            - type: object
+              properties:
+                company:
+                  type: object
+                  nullable: true
+                  properties:
+                    company_id:
+                      type: integer
+                    company_name:
+                      type: string
+                    is_active:
+                      type: boolean
+                department:
+                  type: object
+                  nullable: true
+                  properties:
+                    department_id:
+                      type: integer
+                    company_id:
+                      type: integer
+                    department_name:
+                      type: string
+                    is_active:
+                      type: boolean
+                time_zone:
+                  type: object
+                  nullable: true
+                  properties:
+                    time_zone_id:
+                      type: integer
+                    time_zone_name:
+                      type: string
+                    utc_offset:
+                      type: string
+                    is_dst:
+                      type: boolean
+                language:
+                  type: object
+                  nullable: true
+                  properties:
+                    language_id:
+                      type: integer
+                    language_code:
+                      type: string
+                    language_name:
+                      type: string
+                roles:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role_id:
+                        type: integer
+                      role_name:
+                        type: string
+                station_permissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      station_id:
+                        type: integer
+                      station_name:
+                        type: string
+                      can_access:
+                        type: boolean
+                stations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      station_id:
+                        type: integer
+                      station_name:
+                        type: string
+                      location_description:
+                        type: string
+                        nullable: true
+                      is_active:
+                        type: boolean
+                      display_priority:
+                        type: integer
+                reel_permissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reel_id:
+                        type: integer
+                      reel_name:
+                        type: string
+                      can_dispense:
+                        type: boolean
+                reels:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reel_id:
+                        type: integer
+                      reel_name:
+                        type: string
+                      station_id:
+                        type: integer
+                      tank_id:
+                        type: integer
+                      is_active:
+                        type: boolean
+                tank_permissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tank_id:
+                        type: integer
+                      tank_name:
+                        type: string
+                      can_dispense:
+                        type: boolean
+                      can_override:
+                        type: boolean
+                tanks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tank_id:
+                        type: integer
+                      tank_name:
+                        type: string
+                      station_id:
+                        type: integer
+                        nullable: true
+                      product_id:
+                        type: integer
+                      is_active:
+                        type: boolean
+                locale:
+                  type: string
+                  example: en
+        agreement:
+          type: object
+          properties:
+            required:
+              type: boolean
+            locale:
+              type: string
+              nullable: true
+            text:
+              type: string
+              nullable: true
 
     User:
       type: object
@@ -294,6 +541,149 @@ components:
           type: integer
           nullable: true
           readOnly: true
+    UserPayload:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            company:
+              type: object
+              nullable: true
+              properties:
+                company_id:
+                  type: integer
+                company_name:
+                  type: string
+                is_active:
+                  type: boolean
+            department:
+              type: object
+              nullable: true
+              properties:
+                department_id:
+                  type: integer
+                company_id:
+                  type: integer
+                department_name:
+                  type: string
+                is_active:
+                  type: boolean
+            time_zone:
+              type: object
+              nullable: true
+              properties:
+                time_zone_id:
+                  type: integer
+                time_zone_name:
+                  type: string
+                utc_offset:
+                  type: string
+                is_dst:
+                  type: boolean
+            language:
+              type: object
+              nullable: true
+              properties:
+                language_id:
+                  type: integer
+                language_code:
+                  type: string
+                language_name:
+                  type: string
+            roles:
+              type: array
+              items:
+                type: object
+                properties:
+                  role_id:
+                    type: integer
+                  role_name:
+                    type: string
+            station_permissions:
+              type: array
+              items:
+                type: object
+                properties:
+                  station_id:
+                    type: integer
+                  station_name:
+                    type: string
+                  can_access:
+                    type: boolean
+            stations:
+              type: array
+              items:
+                type: object
+                properties:
+                  station_id:
+                    type: integer
+                  station_name:
+                    type: string
+                  location_description:
+                    type: string
+                    nullable: true
+                  is_active:
+                    type: boolean
+                  display_priority:
+                    type: integer
+            reel_permissions:
+              type: array
+              items:
+                type: object
+                properties:
+                  reel_id:
+                    type: integer
+                  reel_name:
+                    type: string
+                  can_dispense:
+                    type: boolean
+            reels:
+              type: array
+              items:
+                type: object
+                properties:
+                  reel_id:
+                    type: integer
+                  reel_name:
+                    type: string
+                  station_id:
+                    type: integer
+                  tank_id:
+                    type: integer
+                  is_active:
+                    type: boolean
+            tank_permissions:
+              type: array
+              items:
+                type: object
+                properties:
+                  tank_id:
+                    type: integer
+                  tank_name:
+                    type: string
+                  can_dispense:
+                    type: boolean
+                  can_override:
+                    type: boolean
+            tanks:
+              type: array
+              items:
+                type: object
+                properties:
+                  tank_id:
+                    type: integer
+                  tank_name:
+                    type: string
+                  station_id:
+                    type: integer
+                    nullable: true
+                  product_id:
+                    type: integer
+                  is_active:
+                    type: boolean
+            locale:
+              type: string
+              example: en
   responses:
     UnauthorizedError:
       description: Unauthorized access

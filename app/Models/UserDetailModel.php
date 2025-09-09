@@ -45,12 +45,12 @@ class UserDetailModel extends Model
     ];
 
     protected $useTimestamps = true;
-    protected $createdField  = 'f_created_at';
-    protected $updatedField  = 'f_updated_at';
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
 
-    // Columns allowed for ordering and searching via DataTables
-    public const ORDERABLE = ['f_user_id', 'f_first_name', 'f_user_email', 'f_last_name', 'f_status', 'f_created_at'];
-    public const SEARCHABLE = ['f_first_name', 'f_user_email', 'f_last_name', 'f_status'];
+    // Columns allowed for ordering and searching via DataTables (aligned with schema)
+    public const ORDERABLE = ['user_id', 'first_name', 'email', 'last_name', 'is_active', 'created_at'];
+    public const SEARCHABLE = ['first_name', 'email', 'last_name'];
 
     public function datatablesQuery(array $params): array
     {
@@ -107,10 +107,10 @@ class UserDetailModel extends Model
             $orderIndex = (int) ($params['order'][0]['column'] ?? 0);
             $dirRaw     = $params['order'][0]['dir'] ?? 'asc';
             $orderDir   = strtolower((string) $dirRaw) === 'desc' ? 'DESC' : 'ASC';
-            $orderCol   = self::ORDERABLE[$orderIndex] ?? 'f_user_id';
+            $orderCol   = self::ORDERABLE[$orderIndex] ?? 'user_id';
             $builder->orderBy($orderCol, $orderDir);
         } else {
-            $builder->orderBy('f_user_id', 'DESC');
+            $builder->orderBy('user_id', 'DESC');
         }
 
         // Take compiled SQL snapshot for data BEFORE pagination is applied

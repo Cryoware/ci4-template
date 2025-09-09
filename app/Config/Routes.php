@@ -8,8 +8,13 @@ use CodeIgniter\Router\RouteCollection;
 
 $routes->get('home', 'Home::index');
 
-$routes->group('api/v2',['namespace' => 'App\Controllers\Api\V2'], static function ($routes) {
-    $routes->post('auth/login', 'AuthApiController::login');;
+$routes->group('api/v2',['namespace' => 'App\\Controllers\\Api\\V2'], static function ($routes) {
+    $routes->post('auth/login', 'AuthApiController::login');
+    $routes->post('auth/logout', 'AuthApiController::logout');
+    $routes->post('auth/agreement/accept', 'AuthApiController::acceptAgreement');
+    $routes->post('refresh', 'AuthApiController::refresh');
+    $routes->get('auth/me', 'AuthApiController::me');
+
     $routes->get('users', 'AuthApiController::users');
     $routes->get('swagger.yaml', 'Swagger::index');
 });
