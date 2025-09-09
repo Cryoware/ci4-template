@@ -6,6 +6,14 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 
+$routes->get('home', 'Home::index');
+
+$routes->group('api/v2',['namespace' => 'App\Controllers\Api\V2'], static function ($routes) {
+    $routes->post('auth/login', 'AuthApiController::login');;
+    $routes->get('users', 'AuthApiController::users');
+    $routes->get('swagger.yaml', 'Swagger::index');
+});
+
 // -----------------------------------------------------------------------------
 // Public Routes
 // -----------------------------------------------------------------------------

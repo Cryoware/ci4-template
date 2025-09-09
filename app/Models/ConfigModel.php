@@ -7,7 +7,7 @@ class ConfigModel extends Model
     protected $table      = 'app_config';
     protected $primaryKey = 'config_key';
     protected $returnType = 'array';
-    protected $allowedFields = ['config_key', 'config_value', 'config_type', 'updated_at'];
+    protected $allowedFields = ['config_key', 'config_value', 'config_data_type', 'updated_at'];
     protected $useAutoIncrement = false; // <— important for string PKs
 
     /**

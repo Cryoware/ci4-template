@@ -36,7 +36,7 @@ class ConfigService
 
         foreach ($configs as $row) {
             if (($row['config_key'] ?? null) === $key) {
-                $value = self::decodeValue($row['config_value'], $row['config_type']);
+                $value = self::decodeValue($row['config_value'], $row['config_data_type']);
                 self::$memoryCache[$key] = $value;
                 return $value;
             }
@@ -63,7 +63,7 @@ class ConfigService
         $model->save([
             'config_key'   => $key,
             'config_value' => $encodedValue,
-            'config_type'  => $type
+            'config_data_type'  => $type
         ]);
 
         // Update in-memory
@@ -152,7 +152,7 @@ class ConfigService
                     continue;
                 }
                 self::$memoryCache[$row['config_key']] =
-                    self::decodeValue($row['config_value'], $row['config_type']);
+                    self::decodeValue($row['config_value'], $row['config_data_type']);
             }
         }
 
@@ -191,7 +191,7 @@ class ConfigService
             $model->save([
                 'config_key'   => $key,
                 'config_value' => $encodedValue,
-                'config_type'  => $type,
+                'config_data_type'  => $type,
             ]);
 
             self::$memoryCache[$key] = $value;

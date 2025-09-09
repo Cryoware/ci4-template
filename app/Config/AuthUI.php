@@ -13,7 +13,7 @@ class AuthUI extends BaseConfig
      * When true, render the PIN keypad login UI.
      * When false, render the Username/Password login UI.
      */
-    public bool $usePinLogin = true;
+    public bool $usePinLogin = false;
 
     /**
      * Map of role ID to dashboard path.

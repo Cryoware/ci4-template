@@ -1,20 +1,16 @@
 openapi: 3.1.1
 info:
   title:  Generation 2 API
-  description: API for oil dispensing management system
+  description: API for management system
   version: 1.0.0
   contact:
     name: API Support
-    email: support@liquidynamics.com
+    email: support@localhost.com
   license:
     name: Proprietary
-    url: https://www.liquidynamics.com/terms
+    url: https://www.localhost.com/terms
 
 servers:
-  - url: https://api.oilcop.example.com/v1
-    description: Production server
-  - url: https://staging-api.oilcop.example.com/v1
-    description: Staging server
   - url: http://localhost:8484/api/v1
     description: Local development server
 

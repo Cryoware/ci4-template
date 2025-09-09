@@ -1,0 +1,331 @@
+openapi: 3.1.0
+info:
+  title: Title
+  description: Title
+  version: 1.0.0
+servers:
+  - url: http://localhost:8484/api/v2
+    description: Local development server
+# Add global security so all operations use bearer unless overridden
+security:
+  - bearerAuth: []
+paths:
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: >
+        Authenticate a user with either username or email (exactly one must be provided) and password.
+        Returns a short-lived access token and sets a long-lived HttpOnly refresh token cookie.
+      # Make login public (no auth) even with global security enabled
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/LoginRequestUsername'
+                - $ref: '#/components/schemas/LoginRequestEmail'
+              discriminator:
+                propertyName: identifier_type
+                mapping:
+                  username: '#/components/schemas/LoginRequestUsername'
+                  email: '#/components/schemas/LoginRequestEmail'
+            examples:
+              byUsername:
+                summary: Login with username
+                value:
+                  identifier_type: username
+                  username: "jstrong"
+                  password: "secret"
+              byEmail:
+                summary: Login with email
+                value:
+                  identifier_type: email
+                  email: "user@example.com"
+                  password: "secret"
+      responses:
+        '200':
+          description: Successful login
+          headers:
+            Set-Cookie:
+              description: >
+                HttpOnly refresh token cookie named "refresh_token". Attributes include Path=/; HttpOnly;
+                Secure (on HTTPS); SameSite=None on HTTPS or Lax otherwise. Expires in ~30 days.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                ok:
+                  value:
+                    success: true
+                    message: Authentication successful
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    expires_in: 3600
+        '400':
+          description: Validation error (e.g., missing password, both/none of username/email, invalid formats)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bothProvided:
+                  value:
+                    error: "Provide exactly one of username or email"
+                    code: "VALIDATION_ERROR"
+                invalidEmail:
+                  value:
+                    error: "Invalid email format"
+                    code: "VALIDATION_ERROR"
+                invalidUsername:
+                  value:
+                    error: "Invalid username format"
+                    code: "VALIDATION_ERROR"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users (requires access token)
+      # Require bearer token for this operation
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Users fetched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+              examples:
+                ok:
+                  value:
+                    success: true
+                    data:
+                      - user_id: 1
+                        username: jstrong
+                        email: user@example.com
+                        first_name: Jim
+                        last_name: Strong
+                      - user_id: 2
+                        username: ado
+                        email: ado@example.com
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+components:
+  securitySchemes:
+    # Define the bearer (JWT) security scheme used by Swagger UI
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Resource not found"
+        code:
+          type: string
+          example: "NOT_FOUND"
+        details:
+          type: object
+          nullable: true
+
+    LoginRequestUsername:
+      type: object
+      required: [identifier_type, username, password]
+      properties:
+        identifier_type:
+          type: string
+          enum: [username]
+        username:
+          type: string
+          description: 3–64 chars; letters, numbers, underscore, dot, hyphen; must not be an email
+          example: "jstrong"
+        password:
+          type: string
+          format: password
+
+    LoginRequestEmail:
+      type: object
+      required: [identifier_type, email, password]
+      properties:
+        identifier_type:
+          type: string
+          enum: [email]
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Authentication successful"
+        token:
+          type: string
+          description: Short-lived access token (JWT) to be sent as Bearer token
+        expires_in:
+          type: integer
+          example: 3600
+
+    User:
+      type: object
+      description: User record without password fields
+      properties:
+        user_id:
+          type: integer
+          readOnly: true
+        external_uuid:
+          type: string
+          format: uuid
+          nullable: true
+          readOnly: true
+        username:
+          type: string
+          example: "jstrong"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        first_name:
+          type: string
+          example: "Jim"
+        last_name:
+          type: string
+          example: "Strong"
+        company_id:
+          type: integer
+          nullable: true
+        department_id:
+          type: integer
+          nullable: true
+        language_id:
+          type: integer
+          nullable: true
+        time_zone_id:
+          type: integer
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+        is_locked:
+          type: boolean
+          nullable: true
+        lockout_reason:
+          type: string
+          enum: [failed_attempts, manual, vacation, other]
+          nullable: true
+        lockout_until:
+          type: string
+          format: date-time
+          nullable: true
+        must_change_password:
+          type: boolean
+          nullable: true
+        agreed_to_terms:
+          type: boolean
+          nullable: true
+        agreed_to_terms_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_login_ip:
+          type: string
+          nullable: true
+        last_login_user_agent:
+          type: string
+          nullable: true
+        last_logout_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_logout_type:
+          type: string
+          enum: [user, timeout, system]
+          nullable: true
+        account_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_by:
+          type: integer
+          nullable: true
+          readOnly: true
+        updated_by:
+          type: integer
+          nullable: true
+          readOnly: true
+  responses:
+    UnauthorizedError:
+      description: Unauthorized access
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized access"
+            code: "UNAUTHORIZED"
+
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Insufficient permissions"
+            code: "FORBIDDEN"
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Resource not found"
+            code: "NOT_FOUND"
+tags:
+  - name: Authentication
+    description: User authentication
+  - name: Users
+    description: User listing
