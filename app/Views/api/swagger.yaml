@@ -1,0 +1,1808 @@
+openapi: 3.1.1
+info:
+  title: Title
+  description: Title
+  version: 1.0.0
+servers:
+  - url: http://localhost:8484/api/v2
+    description: Local development server
+security:
+  - bearerAuth: []
+paths:
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: >
+        Authenticate a user with either username or email (exactly one must be provided) and password.
+        Returns a short-lived access token and sets a long-lived HttpOnly refresh token cookie.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/LoginRequestUsername'
+                - $ref: '#/components/schemas/LoginRequestEmail'
+      responses:
+        '200':
+          description: Successful login
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh token cookie named "refresh_token"
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users (requires access token)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Users fetched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      tags: [Users]
+      summary: Create user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  # ... existing code ...
+  /users/{user_id}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/User'
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    put:
+      tags: [Users]
+      summary: Update user
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      tags: [Users]
+      summary: Partially update user
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    delete:
+      tags: [Users]
+      summary: Delete user
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  # ... existing code ...
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /auth/agreement/accept:
+    post:
+      tags: [Authentication]
+      summary: Accept user agreement
+      description: Marks the user's agreement acceptance and sets agreed_to_terms_at.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Agreement accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      agreed_to_terms: { type: boolean }
+                      agreed_to_terms_at: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Rotates the HttpOnly refresh cookie and returns a new access token. Requires the refresh_token cookie. No Authorization header required.
+      security: []
+      responses:
+        '200':
+          description: Token refreshed
+          headers:
+            Set-Cookie:
+              description: Rotated HttpOnly refresh token cookie.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+                  token: { type: string }
+                  expires_in: { type: integer }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/UserPayload'
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /languages:
+    get:
+      tags: [Languages]
+      summary: List languages
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Language' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    post:
+      tags: [Languages]
+      summary: Create language
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Language' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Language' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /languages/{language_id}:
+    get:
+      tags: [Languages]
+      summary: Get language
+      parameters:
+        - in: path
+          name: language_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Language' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    put:
+      tags: [Languages]
+      summary: Update language
+      parameters:
+        - in: path
+          name: language_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Language' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Language' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      tags: [Languages]
+      summary: Partially update language
+      parameters:
+        - in: path
+          name: language_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Language' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Language' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    delete:
+      tags: [Languages]
+      summary: Delete language
+      parameters:
+        - in: path
+          name: language_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /companies:
+    get:
+      tags: [Companies]
+      summary: List companies
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Company' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    post:
+      tags: [Companies]
+      summary: Create company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Company' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /companies/{company_id}:
+    get:
+      tags: [Companies]
+      summary: Get company
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Company' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    put:
+      tags: [Companies]
+      summary: Update company
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Company' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      tags: [Companies]
+      summary: Partially update company
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Company' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    delete:
+      tags: [Companies]
+      summary: Delete company
+      parameters:
+        - in: path
+          name: company_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /departments:
+    get:
+      tags: [Departments]
+      summary: List departments
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Department' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    post:
+      tags: [Departments]
+      summary: Create department
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Department' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Department' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /departments/{department_id}:
+    get:
+      tags: [Departments]
+      summary: Get department
+      parameters:
+        - in: path
+          name: department_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Department' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    put:
+      tags: [Departments]
+      summary: Update department
+      parameters:
+        - in: path
+          name: department_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Department' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Department' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      tags: [Departments]
+      summary: Partially update department
+      parameters:
+        - in: path
+          name: department_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Department' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Department' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    delete:
+      tags: [Departments]
+      summary: Delete department
+      parameters:
+        - in: path
+          name: department_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /time-zones:
+    get:
+      tags: [TimeZones]
+      summary: List time zones
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/TimeZone' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    post:
+      tags: [TimeZones]
+      summary: Create time zone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TimeZone' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/TimeZone' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /time-zones/{time_zone_id}:
+    get:
+      tags: [TimeZones]
+      summary: Get time zone
+      parameters:
+        - in: path
+          name: time_zone_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/TimeZone' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    put:
+      tags: [TimeZones]
+      summary: Update time zone
+      parameters:
+        - in: path
+          name: time_zone_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TimeZone' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/TimeZone' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      tags: [TimeZones]
+      summary: Partially update time zone
+      parameters:
+        - in: path
+          name: time_zone_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TimeZone' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/TimeZone' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    delete:
+      tags: [TimeZones]
+      summary: Delete time zone
+      parameters:
+        - in: path
+          name: time_zone_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /roles:
+    get:
+      tags: [Roles]
+      summary: List roles
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Role' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    post:
+      tags: [Roles]
+      summary: Create role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Role' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Role' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /roles/{role_id}:
+    get:
+      tags: [Roles]
+      summary: Get role
+      parameters:
+        - in: path
+          name: role_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Role' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    put:
+      tags: [Roles]
+      summary: Update role
+      parameters:
+        - in: path
+          name: role_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Role' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Role' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      tags: [Roles]
+      summary: Partially update role
+      parameters:
+        - in: path
+          name: role_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Role' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Role' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    delete:
+      tags: [Roles]
+      summary: Delete role
+      parameters:
+        - in: path
+          name: role_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /products:
+    get:
+      tags: [Products]
+      summary: List products
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Product' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    post:
+      tags: [Products]
+      summary: Create product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Product' }
+            example:
+              product_name: "Hydraulic Oil ISO 46"
+              description: "High-performance anti-wear hydraulic oil."
+              specific_gravity: 0.86
+              default_unit_id: 1
+              max_preset_amount: 50
+              max_open_amount: 200
+              is_collection_only: false
+              is_active: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Product' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /products/{product_id}:
+    get:
+      tags: [Products]
+      summary: Get product
+      parameters:
+        - in: path
+          name: product_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Product' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    put:
+      tags: [Products]
+      summary: Update product
+      parameters:
+        - in: path
+          name: product_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Product' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Product' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      tags: [Products]
+      summary: Partially update product
+      parameters:
+        - in: path
+          name: product_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Product' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Product' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    delete:
+      tags: [Products]
+      summary: Delete product
+      parameters:
+        - in: path
+          name: product_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /units:
+    get:
+      tags: [Units]
+      summary: List units
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Unit' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    post:
+      tags: [Units]
+      summary: Create unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Unit' }
+            example:
+              unit_name: "Gallon"
+              unit_abbreviation: "gal"
+              is_volume: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Unit' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+
+  /units/{unit_id}:
+    get:
+      tags: [Units]
+      summary: Get unit
+      parameters:
+        - in: path
+          name: unit_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Unit' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    put:
+      tags: [Units]
+      summary: Update unit
+      parameters:
+        - in: path
+          name: unit_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Unit' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Unit' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      tags: [Units]
+      summary: Partially update unit
+      parameters:
+        - in: path
+          name: unit_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Unit' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Unit' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    delete:
+      tags: [Units]
+      summary: Delete unit
+      parameters:
+        - in: path
+          name: unit_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /tanks:
+    get:
+      tags: [Tanks]
+      summary: List tanks
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Tank' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    post:
+      tags: [Tanks]
+      summary: Create tank
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Tank' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Tank' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+  /tanks/{tank_id}:
+    get:
+      tags: [Tanks]
+      summary: Get tank
+      parameters:
+        - in: path
+          name: tank_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Tank' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    put:
+      tags: [Tanks]
+      summary: Update tank
+      parameters:
+        - in: path
+          name: tank_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Tank' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Tank' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    patch:
+      tags: [Tanks]
+      summary: Partially update tank
+      parameters:
+        - in: path
+          name: tank_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Tank' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Tank' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+    delete:
+      tags: [Tanks]
+      summary: Delete tank
+      parameters:
+        - in: path
+          name: tank_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '401': { $ref: '#/components/responses/UnauthorizedError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    UnauthorizedError:
+      description: Authentication required or token invalid/expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: The request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+    # --- Auth ---
+    LoginRequestUsername:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          description: 3–64 chars; letters, numbers, underscore, dot, hyphen; must not be an email
+          example: "xersist"
+        password:
+          type: string
+          format: password
+
+    LoginRequestEmail:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Authentication successful"
+        token:
+          type: string
+          description: Short-lived access token (JWT) to be sent as Bearer token
+        expires_in:
+          type: integer
+          example: 3600
+        user:
+          $ref: '#/components/schemas/UserPayload'
+
+    # --- Reusable mixins ---
+    Timestamped:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Activatable:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+          default: true
+
+    # --- Core domain objects ---
+    Company:
+      allOf:
+        - type: object
+          properties:
+            company_id:
+              type: integer
+          required: [company_id, company_name]
+        - $ref: '#/components/schemas/Activatable'
+        - $ref: '#/components/schemas/Timestamped'
+        - type: object
+          properties:
+            company_name:
+              type: string
+              maxLength: 255
+              example: "LiquiDynamics, Inc"
+
+    Department:
+      allOf:
+        - type: object
+          properties:
+            department_id:
+              type: integer
+            company_id:
+              type: integer
+          required: [department_id, company_id, department_name]
+        - $ref: '#/components/schemas/Activatable'
+        - $ref: '#/components/schemas/Timestamped'
+        - type: object
+          properties:
+            department_name:
+              type: string
+              maxLength: 255
+
+    Language:
+      type: object
+      properties:
+        language_id:
+          type: integer
+        language_code:
+          type: string
+          description: IETF code (e.g., en, fr, es)
+          example: en
+        language_name:
+          type: string
+          example: English
+        is_active:
+          type: boolean
+      required: [language_id, language_code, language_name]
+
+    TimeZone:
+      type: object
+      properties:
+        time_zone_id:
+          type: integer
+        time_zone_name:
+          type: string
+          example: "America/Chicago"
+        utc_offset:
+          type: string
+          description: Offset from UTC (e.g., +00:00, -05:00)
+          example: "-05:00"
+        is_dst:
+          type: boolean
+      required: [time_zone_id, time_zone_name]
+
+    Role:
+      type: object
+      properties:
+        role_id:
+          type: integer
+        role_name:
+          type: string
+          example: "System Administrator"
+        role_description:
+          type: string
+          nullable: true
+        is_system_role:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [role_id, role_name]
+
+    Unit:
+      type: object
+      properties:
+        unit_id:
+          type: integer
+        unit_name:
+          type: string
+          example: "Gallon"
+        unit_abbreviation:
+          type: string
+          example: "gal"
+        is_volume:
+          type: boolean
+      required: [unit_id, unit_name, unit_abbreviation]
+
+    Product:
+      allOf:
+        - type: object
+          properties:
+            product_id:
+              type: integer
+          required: [product_id, product_name, default_unit_id]
+        - $ref: '#/components/schemas/Timestamped'
+        - type: object
+          properties:
+            customer_product_id:
+              type: string
+              nullable: true
+            product_name:
+              type: string
+            description:
+              type: string
+              nullable: true
+            specific_gravity:
+              type: number
+              format: double
+            default_unit_id:
+              type: integer
+            max_preset_amount:
+              type: number
+              format: double
+              nullable: true
+            max_open_amount:
+              type: number
+              format: double
+              nullable: true
+            is_collection_only:
+              type: boolean
+            is_active:
+              type: boolean
+              default: true
+
+    Tank:
+      allOf:
+        - type: object
+          properties:
+            tank_id:
+              type: integer
+          required: [tank_id, product_id, station_id, tank_name]
+        - $ref: '#/components/schemas/Timestamped'
+        - type: object
+          properties:
+            tank_name:
+              type: string
+            product_id:
+              type: integer
+            station_id:
+              type: integer
+            tank_shape:
+              type: string
+              nullable: true
+            height:
+              type: number
+              format: double
+              nullable: true
+            diameter:
+              type: number
+              format: double
+              nullable: true
+            width:
+              type: number
+              format: double
+              nullable: true
+            length:
+              type: number
+              format: double
+              nullable: true
+            capacity:
+              type: number
+              format: double
+              nullable: true
+            current_volume:
+              type: number
+              format: double
+              nullable: true
+            current_height:
+              type: number
+              format: double
+              nullable: true
+            high_level_alarm:
+              type: number
+              format: double
+              nullable: true
+            high_level_warning:
+              type: number
+              format: double
+              nullable: true
+            reorder_level:
+              type: number
+              format: double
+              nullable: true
+            shutoff_level:
+              type: number
+              format: double
+              nullable: true
+            is_active:
+              type: boolean
+              default: true
+
+    Reel:
+      allOf:
+        - type: object
+          properties:
+            reel_id:
+              type: integer
+          required: [reel_id, reel_name, station_id, tank_id]
+        - $ref: '#/components/schemas/Timestamped'
+        - type: object
+          properties:
+            reel_name:
+              type: string
+            station_id:
+              type: integer
+            tank_id:
+              type: integer
+            is_active:
+              type: boolean
+              default: true
+            k_factor:
+              type: number
+              format: double
+              description: calibration factor
+            pulse_count:
+              type: integer
+            last_calibration_date:
+              type: string
+              format: date
+              nullable: true
+
+    Station:
+      allOf:
+        - type: object
+          properties:
+            station_id:
+              type: integer
+          required: [station_id, station_name]
+        - $ref: '#/components/schemas/Timestamped'
+        - type: object
+          properties:
+            station_name:
+              type: string
+            location_description:
+              type: string
+              nullable: true
+            is_active:
+              type: boolean
+              default: true
+            display_priority:
+              type: integer
+
+    # --- Users ---
+    User:
+      allOf:
+        - type: object
+          properties:
+            user_id:
+              type: integer
+          required: [user_id, username, email]
+        - $ref: '#/components/schemas/Timestamped'
+        - type: object
+          properties:
+            external_uuid:
+              type: string
+              nullable: true
+            username:
+              type: string
+              example: "jstrong"
+            email:
+              type: string
+              format: email
+            first_name:
+              type: string
+            last_name:
+              type: string
+            company_id:
+              type: integer
+              nullable: true
+            department_id:
+              type: integer
+              nullable: true
+            language_id:
+              type: integer
+              nullable: true
+            time_zone_id:
+              type: integer
+              nullable: true
+            is_active:
+              type: boolean
+              default: true
+            is_locked:
+              type: boolean
+              default: false
+            lockout_reason:
+              type: string
+              nullable: true
+            lockout_until:
+              type: string
+              format: date-time
+              nullable: true
+            must_change_password:
+              type: boolean
+              default: false
+            agreed_to_terms:
+              type: boolean
+              default: false
+            agreed_to_terms_at:
+              type: string
+              format: date-time
+              nullable: true
+            last_login_at:
+              type: string
+              format: date-time
+              nullable: true
+            last_login_ip:
+              type: string
+              nullable: true
+            last_login_user_agent:
+              type: string
+              nullable: true
+            last_logout_at:
+              type: string
+              format: date-time
+              nullable: true
+            last_logout_type:
+              type: string
+              nullable: true
+            account_expires_at:
+              type: string
+              format: date-time
+              nullable: true
+            updated_by:
+              type: integer
+              nullable: true
+            created_by:
+              type: integer
+              nullable: true
+
+    # Enriched user payload for auth and profile endpoints
+    UserPayload:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            company:
+              $ref: '#/components/schemas/Company'
+            department:
+              $ref: '#/components/schemas/Department'
+            time_zone:
+              $ref: '#/components/schemas/TimeZone'
+            roles:
+              type: array
+              items:
+                $ref: '#/components/schemas/Role'
+            station_permissions:
+              type: array
+              description: Stations the user can access
+              items:
+                type: object
+                properties:
+                  station_id:
+                    type: integer
+                  station_name:
+                    type: string
+                  can_access:
+                    type: boolean
+            reel_permissions:
+              type: array
+              description: Reels the user can dispense from
+              items:
+                type: object
+                properties:
+                  reel_id:
+                    type: integer
+                  reel_name:
+                    type: string
+                  can_dispense:
+                    type: boolean
+            tank_permissions:
+              type: array
+              description: Tanks user has permissions for
+              items:
+                type: object
+                properties:
+                  tank_id:
+                    type: integer
+                  tank_name:
+                    type: string
+                  can_dispense:
+                    type: boolean
+                  can_override:
+                    type: boolean
+tags:
+  - name: Authentication
+    description: User authentication
+  - name: Users
+    description: User listing
+  - name: Languages
+    description: Manage languages
+  - name: Companies
+    description: Manage companies
+  - name: Departments
+    description: Manage departments
+  - name: Units
+    description: Manage measurement units (volume or non-volume)

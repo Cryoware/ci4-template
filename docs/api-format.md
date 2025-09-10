@@ -5,11 +5,11 @@ OilCop G2 API. Use this as the single source of truth when converting legacy con
 
 Notes:
 
-- Base versioned path: `/api/v1/...`
+- Base versioned path: `/api/v2/...`
 - Content type: `application/json; charset=utf-8`
 - For existing web controllers (e.g., `/admin/login`), keep backward compatibility by either adding a parallel API route
   that follows this spec or by honoring content negotiation (`Accept: application/json`).
-- `TankApiController` (app/Controllers/Api/V1/TankApiController.php) already follows the general shape of this standard
+- `TankApiController` (app/Controllers/api/v2/TankApiController.php) already follows the general shape of this standard
   with `data` and `meta` and ETag support.
 - OpenAPI spec: This guide aligns with OpenAPI 3.1.1; see `docs/openapi.yaml` for the canonical specification.
 - Legacy naming note: All examples use the normalized schema (no legacy t_ table or f_ field prefixes). Field names like tank_id, station_id, product_id, etc., match the current database dump in docs\\Docker_8_4-2025_09_06_17_18_11-dump.sql.
@@ -41,11 +41,11 @@ Tank endpoints), a subset is acceptable as long as it’s forward-compatible.
       "total_pages": 3
     },
     "links": {
-        "self": "/api/v1/tanks?page=1",
-        "first": "/api/v1/tanks?page=1",
+        "self": "/api/v2/tanks?page=1",
+        "first": "/api/v2/tanks?page=1",
         "prev": null,
-        "next": "/api/v1/tanks?page=2",
-        "last": "/api/v1/tanks?page=3"
+        "next": "/api/v2/tanks?page=2",
+        "last": "/api/v2/tanks?page=3"
     },
     "etag": "\"abc123\""       // when caching is used (see ETag)
   }
@@ -126,19 +126,19 @@ When returning non-2xx, include `errors` to help clients act on issues:
 
 ### **6. Authentication and CSRF (Revised for Stateless API)**
 
-The OilCop G2 API is **strictly stateless** and does not use server-side sessions for authentication. All endpoints under `/api/v1` **MUST** be authenticated using a bearer token provided in the `Authorization` header.
+The OilCop G2 API is **strictly stateless** and does not use server-side sessions for authentication. All endpoints under `/api/v2` **MUST** be authenticated using a bearer token provided in the `Authorization` header.
 
 -   **Authentication:** `Authorization: Bearer <your-api-token>`
 -   **CSRF Protection:** **CSRF protection is disabled for all API routes.** Stateless, token-based authentication is inherently immune to CSRF attacks, making CSRF tokens unnecessary.
 -   **Token Management:** Clients are responsible for obtaining, securely storing, and refreshing tokens as needed. See the specific authentication endpoints for details.
 
-> **Legacy Note:** During the transition period, some non-API web forms may still use sessions and CSRF. This does not apply to the `/api/v1/*` routes, which follow the stateless pattern.
+> **Legacy Note:** During the transition period, some non-API web forms may still use sessions and CSRF. This does not apply to the `/api/v2/*` routes, which follow the stateless pattern.
 
 ### **6.1. Token-Based Authentication Flow**
 
 To consume this API from your Vue.js app, you will need to follow this standard authentication flow:
 
-1.  **Login:** The client `POST`s user credentials (e.g., `pin`) to `/api/v1/auth/login`.
+1.  **Login:** The client `POST`s user credentials (e.g., `pin`) to `/api/v2/auth/login`.
 2.  **Receive Token:** The API responds with a `201 Created` status and a JSON payload containing an access token.
     ```json
     {
@@ -156,7 +156,7 @@ To consume this API from your Vue.js app, you will need to follow this standard 
 3.  **Store Token:** The client (your Vue app) must securely store this token (e.g., in memory, or in an `HttpOnly` cookie if served from the same domain, but **not** in `localStorage` for maximum security).
 4.  **API Requests:** The client includes this token in the `Authorization` header of all subsequent requests to protected endpoints.
     ```http
-    GET /api/v1/tanks HTTP/1.1
+    GET /api/v2/tanks HTTP/1.1
     Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJ...
     Accept: application/json
     ```
@@ -169,7 +169,7 @@ To consume this API from your Vue.js app, you will need to follow this standard 
 
 ## 8. Versioning
 
-- Prefix version in the path: `/api/v1/...`.
+- Prefix version in the path: `/api/v2/...`.
 - Breaking changes require a new version (e.g., `/api/v2`).
 
 ## 9. Login Controller Migration Guide
@@ -187,7 +187,7 @@ Observed legacy tokens (not exhaustive):
 
 Recommended migration options:
 
-- Option A (preferred): Introduce a new endpoint `POST /api/v1/auth/login` that follows this spec and keep`/admin/login`
+- Option A (preferred): Introduce a new endpoint `POST /api/v2/auth/login` that follows this spec and keep`/admin/login`
   unchanged for existing UIs.
 - Option B: Content negotiation on `/admin/login`:
     - If `Accept: application/json` respond with the standardized JSON and appropriate HTTP status.
@@ -198,7 +198,7 @@ Recommended migration options:
 Request (either JSON or form-encoded):
 
 ```http
-POST /api/v1/auth/login
+POST /api/v2/auth/login
 Content-Type: application/json
 
 { "pin": "1234" }
@@ -359,7 +359,7 @@ Clients may still choose their own routing logic; the redirect is advisory.
 
 ## 10. Tank endpoints example (existing)
 
-`GET /api/v1/tanks` (implemented in TankApiController)
+`GET /api/v2/tanks` (implemented in TankApiController)
 
 - Responds with:
 

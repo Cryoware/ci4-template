@@ -68,6 +68,7 @@ class Home extends BaseController
 //
 
 
-        return view('welcome_message', ['settings' => $settings]);
+        return view('api/api', ['settings' => $settings]);
+//        return view('welcome_message', ['settings' => $settings]);
     }
 }
