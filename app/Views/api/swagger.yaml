@@ -292,6 +292,10 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/Language' }
+            example:
+              language_code: "en"
+              language_name: "English"
+              is_active: true
       responses:
         '201':
           description: Created
